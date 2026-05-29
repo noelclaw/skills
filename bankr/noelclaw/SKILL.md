@@ -1,10 +1,12 @@
 # Noelclaw — Autonomous Crypto Agent Platform
 
-Noelclaw is a multi-agent crypto platform that turns plain-English instructions into on-chain actions. It combines a 35-tool MCP server, an NL-to-automation engine, a multi-agent swarm, and a persistent vault — all running on Base with USDC via x402.
+Noelclaw is a multi-agent crypto platform that turns plain-English instructions into on-chain actions. It combines a 38-tool MCP server, an NL-to-automation engine, a multi-agent swarm, and a persistent vault — all running on Base with USDC via x402.
 
 ## Core Capabilities
 
 **Trading & DeFi (via 0x on Base)**
+- Portfolio: `get_portfolio` — get all token balances and total USD value for the MCP wallet
+- Swap preview: `estimate_swap` — see expected output amount and price impact before executing
 - Token swaps: `swap_tokens` — execute any ERC-20↔ERC-20 swap on Base through the user's custodial MCP wallet
 - Token transfers: `send_token` — send ETH, USDC, USDT, DAI to any address
 - Wallet resolution: `get_wallet_address` — look up or create a user's encrypted on-chain wallet
@@ -15,7 +17,7 @@ Noelclaw is a multi-agent crypto platform that turns plain-English instructions 
   - **Actions**: `swap`, `send`, `alert` (Telegram)
   - **Limits**: `maxRuns`, `maxSpendUsd`, expiry
   - Examples: *"Buy $50 of ETH every day, stop after $500"*, *"If ETH drops 10%, buy $100 USDC→ETH"*, *"Alert me when BTC dominance drops below 50%"*
-- `list_automations` / `pause_automation` / `delete_automation`
+- `list_automations` / `pause_automation` / `delete_automation` / `get_automation_runs` — see per-run history with status, tx hash, and error details
 
 **Agent Swarm**
 Five specialized sub-agents run autonomously when the swarm is active:
@@ -118,7 +120,7 @@ All swap/send operations go through the user's personal encrypted MCP wallet on 
 
 - **Bankr LLM API** (`llm.bankr.bot`) — all agent reasoning and market intelligence
 - **x402 protocol** — native USDC micropayment support on Base
-- **MCP (Model Context Protocol)** — 35 tools, stdio transport, v2.1.0
+- **MCP (Model Context Protocol)** — 38 tools, stdio transport, v2.1.0
 - **Convex** — real-time backend, cron automation engine, swarm coordinator
 - **0x Protocol v2** — on-chain swap execution on Base
 - **Base mainnet** — all token operations and payments
