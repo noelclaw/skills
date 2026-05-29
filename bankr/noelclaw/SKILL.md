@@ -1,222 +1,124 @@
----
-name: noelclaw
-description: Crypto AI agent skill — live market signals, whale tracking, autonomous research, and Base DeFi tools. Use when the user wants to get live crypto prices, trending tokens, or top-20 market data, fetch trading signals for BTC/ETH with entry/TP/SL targets, check signal history and winrates, track whale wallet movements and smart money flows, get daily performance recaps, run on-demand research on any token or trend, start an autonomous 8-hour research shift with Telegram reports, check a research report for a specific token, swap tokens on Base mainnet, send ETH or ERC-20 tokens to any address, view wallet portfolio with USD values, chat with the Noel DeFi AI for market analysis and trade ideas, or configure a personal Telegram bot for signal and alert delivery. Powered by Base mainnet with server-side encrypted wallets.
-metadata:
-  {
-    "clawdbot":
-      {
-        "emoji": "⚡",
-        "homepage": "https://noelclaw.fun",
-        "requires": { "bins": ["npx"] },
-      },
-  }
----
+# Noelclaw — Autonomous Crypto Agent Platform
 
-# Noelclaw
+Noelclaw is a multi-agent crypto platform that turns plain-English instructions into on-chain actions. It combines a 35-tool MCP server, an NL-to-automation engine, a multi-agent swarm, and a persistent vault — all running on Base with USDC via x402.
 
-Live crypto signals, whale tracking, autonomous research, and Base DeFi — all via natural language. Noelclaw runs as an MCP server and gives Claude, Cursor, Hermes, and any MCP-compatible client access to real-time on-chain intelligence and a server-side Base wallet.
+## Core Capabilities
 
-## Install
+**Trading & DeFi (via 0x on Base)**
+- Token swaps: `swap_tokens` — execute any ERC-20↔ERC-20 swap on Base through the user's custodial MCP wallet
+- Token transfers: `send_token` — send ETH, USDC, USDT, DAI to any address
+- Wallet resolution: `get_wallet_address` — look up or create a user's encrypted on-chain wallet
 
-### Hermes
+**Natural Language Automations**
+- `create_automation` — parse plain English into a structured trigger + action pair, then run it on a cron
+  - **Triggers**: `schedule` (interval), `price_drop_%`, `price_rise_%`, `price_below`, `price_above`, `dominance_below`, `dominance_above`
+  - **Actions**: `swap`, `send`, `alert` (Telegram)
+  - **Limits**: `maxRuns`, `maxSpendUsd`, expiry
+  - Examples: *"Buy $50 of ETH every day, stop after $500"*, *"If ETH drops 10%, buy $100 USDC→ETH"*, *"Alert me when BTC dominance drops below 50%"*
+- `list_automations` / `pause_automation` / `delete_automation`
+
+**Agent Swarm**
+Five specialized sub-agents run autonomously when the swarm is active:
+- **Market Monitor** — tracks live prices, detects volume spikes and resistance breaks
+- **Sentiment Tracker** — scans on-chain signals and social data
+- **Workflow Executor** — fires scheduled automations and DCA strategies
+- **Memory Manager** — compresses and organises shared swarm memory
+- **Risk Verifier** — gates every action through a configurable risk score threshold
+
+Tools: `start_swarm`, `stop_swarm`, `get_swarm_status`, `get_swarm_memory`, `write_swarm_memory`, `get_execution_scores`
+
+**Market Intelligence**
+- `get_market_data` — live prices, trending coins, top-20 market cap via Bankr LLM API
+- `get_token_data` — deep token analysis (price, volume, sentiment, on-chain activity)
+- `ask_noel` — general crypto Q&A and reasoning, powered by Bankr LLM
+
+**MiroShark Simulation**
+- `miroshark_simulate` — run a multi-agent market simulation (bull/bear/neutral scenario modelling)
+- `miroshark_status` — poll simulation progress and get final results with agent activity breakdown
+- `miroshark_stop` — stop a running simulation
+
+**Framework (Agent Orchestration)**
+- `create_task_packet` / `list_task_packets` — define and track structured agent task bundles
+- `list_playbooks` / `run_playbook` — run predefined multi-step agent workflows
+- `get_noel_ledger` — view the agent action ledger (all tool calls, results, timestamps)
+- `get_sentinel_rules` — retrieve active risk rules that gate autonomous actions
+
+**Vault (Persistent Agent Memory)**
+- `vault_save` / `vault_read` / `vault_search` / `vault_list` — store and retrieve agent outputs, strategies, research notes
+- `vault_history` / `vault_diff` / `vault_export` — version history and diff between entries
+
+**Other**
+- `post_tweet` — post to X/Twitter with optional humanization
+- `humanize_text` — rewrite AI-generated text to sound natural
+- `set_telegram` — link a Telegram chat for alert delivery
+
+## Access
+
+**MCP Server**
 
 ```bash
-hermes mcp add noelclaw --command npx --args @noelclaw/research --env NOELCLAW_CONVEX_URL=https://valuable-fish-533.convex.site
+npx -y @noelclaw/mcp
 ```
 
-### Claude Code
-
-```bash
-claude mcp add noelclaw -- npx @noelclaw/research
-```
-
-### Claude Desktop / Cursor / Windsurf
-
-Add to your MCP config (`~/Library/Application Support/Claude/claude_desktop_config.json` on Mac, `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
-
+Add to Claude Desktop or any MCP-compatible client:
 ```json
 {
   "mcpServers": {
     "noelclaw": {
       "command": "npx",
-      "args": ["@noelclaw/research"],
-      "env": {
-        "NOELCLAW_CONVEX_URL": "https://valuable-fish-533.convex.site"
-      }
+      "args": ["-y", "@noelclaw/mcp"],
+      "env": { "NOELCLAW_API_KEY": "your_key_here" }
     }
   }
 }
 ```
 
-Restart your client after adding the config. Tools appear automatically.
+Get your API key at **noelclaw.com/api-keys** (7 free keys per account).
 
-### npm (global install)
+**HTTP API**
+Base URL: `https://api.noelclaw.com`
 
-```bash
-npm install -g @noelclaw/research
-```
+| Auth Method | Header |
+|---|---|
+| Session token | `Authorization: Bearer <token>` |
+| x402 micropayment | Send USDC on Base → retry with `X-Payment: {"txHash":"...","requestId":"..."}` |
+| Wallet signature | `X-Wallet-Address` + `X-Wallet-Signature` + `X-Wallet-Timestamp` |
 
-Then use `noelclaw-research` as the command instead of `npx @noelclaw/research`.
+Free tools (`get_market_data`, `ask_noel`) pass through with no auth required.
 
-## Tools
+## Key Endpoints
 
-### Market Data & Research (11)
+| Endpoint | Method | Description |
+|---|---|---|
+| `/mcp/market` | GET | Live prices, trending, top-20 |
+| `/mcp/chat` | POST | Ask Noel any crypto question |
+| `/automations/create` | POST | Create automation from plain English |
+| `/automations/list` | GET | List user's automations |
+| `/automations/pause` | POST | Pause or resume an automation |
+| `/automations/delete` | POST | Delete an automation |
+| `/swarm/start` | POST | Start the agent swarm |
+| `/swarm/stop` | POST | Stop the swarm |
+| `/swarm/status` | GET | Current swarm status + memory |
+| `/swarm/scores` | GET | Agent execution scores |
+| `/mcp/defi/swap` | POST | Get 0x swap quote |
+| `/mcp/defi/send` | POST | Get send tx data |
 
-| Tool | Description |
-|------|-------------|
-| `get_market_data` | Live top-20 coins by market cap, trending tokens, and key prices for BTC/ETH/SOL. Results sent to Telegram if configured. |
-| `get_token_data` | Price, 24h change, market cap, and volume for any token or set of tokens. |
-| `get_latest_signal` | Latest BTC and/or ETH 1H trading signals — entry price, take profit targets, stop loss, confidence score, and reasoning. Generated daily at 08:00 UTC. |
-| `get_signal_history` | Signal history with win/loss record, winrate stats, best/worst PnL, and avg return over a configurable lookback period. |
-| `get_whale_alerts` | Recent large wallet movements, smart money flows, and CEX inflow/outflow alerts for BTC and ETH. |
-| `get_daily_recap` | Today's trading performance recap with BTC/ETH win counts, winrates, avg PnL, and an AI-written review. |
-| `run_research` | On-demand research snapshot on any crypto topic — like Perplexity but for crypto. Returns overview, key findings, market impact, affected tokens, sentiment, and what to watch. |
-| `start_research` | Start an 8-hour autonomous research shift. Noel monitors markets, on-chain signals, and news — delivering reports to your Telegram at 2.5h, 5h, and 8h intervals. |
-| `stop_research` | Stop an active autonomous research shift early. |
-| `get_research_status` | Check the status of a running research shift and view recent reports. |
-| `get_research_report` | Get the latest autonomous research report for a specific token or topic. |
+## Integration Pattern
 
-### Wallet & DeFi (4)
+Noelclaw works as an **execution + intelligence layer** alongside Bankr:
+- Use `get_market_data` / `ask_noel` for research (free, no auth)
+- Use `create_automation` to set recurring DCA/alert strategies in plain English
+- Use `swap_tokens` / `send_token` for immediate on-chain execution
+- Use `start_swarm` for autonomous 24/7 market monitoring and execution
+- Use `vault_save` to persist agent research and strategy outputs across sessions
 
-| Tool | Description |
-|------|-------------|
-| `get_portfolio` | Base wallet address and full token portfolio — all balances with USD values. Auto-creates a secure encrypted wallet on first use. |
-| `swap_tokens` | Swap ETH, USDC, USDT, DAI, or WETH on Base mainnet via 0x Permit2. Amount in smallest unit (wei for ETH/WETH, 6 decimals for USDC/USDT). |
-| `send_token` | Send ETH or ERC-20 tokens (USDC, USDT, DAI, WETH) to any address on Base mainnet. |
-| `ask_noel` | Chat with Noel DeFi AI — market outlook, trade ideas, on-chain analysis, and crypto research with live market context. Results sent to Telegram if configured. |
+All swap/send operations go through the user's personal encrypted MCP wallet on Base. The swarm's risk-verifier gates every autonomous action against a configurable threshold before execution.
 
-### Configuration (1)
+## Tech Stack
 
-| Tool | Description |
-|------|-------------|
-| `set_telegram` | Configure a personal Telegram bot token and chat ID. Noel delivers signals, whale alerts, and research reports directly to your Telegram. |
-
-## Usage Examples
-
-```
-# Get live market data
-get_market_data
-
-# Get specific token data
-get_token_data(question: "show me price and volume for SOL, ARB, and OP")
-
-# Latest BTC signal
-get_latest_signal(token: "BTC")
-
-# Signal history for the past 14 days
-get_signal_history(token: "ETH", days: 14)
-
-# Recent whale activity
-get_whale_alerts(hours: 6)
-
-# Today's recap
-get_daily_recap
-
-# On-demand research
-run_research(query: "What is the impact of Ethereum ETF approval on Base ecosystem?")
-
-# Start an 8-hour autonomous research shift
-start_research(userId: "your-id")
-
-# Check research shift status
-get_research_status(userId: "your-id")
-
-# Get latest report for a token
-get_research_report(userId: "your-id", token: "SOL")
-
-# Stop an active shift
-stop_research(userId: "your-id")
-
-# View your Base wallet portfolio
-get_portfolio(userId: "your-id")
-
-# Swap 0.1 ETH for USDC
-swap_tokens(userId: "your-id", fromToken: "ETH", toToken: "USDC", amount: "100000000000000000")
-
-# Send 50 USDC to an address
-send_token(userId: "your-id", token: "USDC", toAddress: "0x...", amount: "50000000")
-
-# Ask Noel a question
-ask_noel(question: "Is ETH forming a breakout on the 1H chart?")
-
-# Configure Telegram
-set_telegram(userId: "your-id", telegramBotToken: "1234567890:ABC...", telegramChatId: "987654321")
-```
-
-## Wallet Setup
-
-Noelclaw wallets are server-side encrypted wallets on Base mainnet — no external wallet popup, no browser extension required. Your wallet is created automatically the first time you call `get_portfolio`. Fund it with ETH or USDC on Base to use swaps and sends.
-
-```
-# First use — creates your wallet
-get_portfolio(userId: "your-id")
-
-# → Returns your Base address and current balances
-# Fund the address with ETH or USDC on Base, then:
-
-swap_tokens(userId: "your-id", fromToken: "ETH", toToken: "USDC", amount: "10000000000000000")
-```
-
-## Telegram Delivery
-
-Most tools accept an optional `userId` parameter. When a `userId` is provided and Telegram is configured for that user, results are delivered directly to your bot — signals, whale alerts, research reports, and market data.
-
-**Setup:**
-
-1. Create a bot via [@BotFather](https://t.me/BotFather) on Telegram — get a bot token
-2. Get your chat ID from [@userinfobot](https://t.me/userinfobot)
-3. Run `set_telegram` with your userId, bot token, and chat ID
-
-**Autonomous research reports** are delivered at **2.5h, 5h, and 8h** into each shift.
-
-## Token Amounts
-
-Noelclaw uses smallest-unit amounts for on-chain accuracy:
-
-| Token | Decimals | Example: 1 token |
-|-------|----------|------------------|
-| ETH / WETH | 18 | `1000000000000000000` |
-| USDC / USDT | 6 | `1000000` |
-| DAI | 18 | `1000000000000000000` |
-
-## Custom Deployment
-
-By default, Noelclaw uses the hosted backend. To point to your own Convex deployment:
-
-```bash
-NOELCLAW_CONVEX_URL="https://your-deployment.convex.site" npx @noelclaw/research
-```
-
-Or in your MCP config's `env` block:
-
-```json
-{
-  "mcpServers": {
-    "noelclaw": {
-      "command": "npx",
-      "args": ["@noelclaw/research"],
-      "env": {
-        "NOELCLAW_CONVEX_URL": "https://your-deployment.convex.site"
-      }
-    }
-  }
-}
-```
-
-## Troubleshooting
-
-| Error | Fix |
-|-------|-----|
-| Tools not appearing | Restart your MCP client after adding the config |
-| `Noelclaw API error: 404` | Wrong `NOELCLAW_CONVEX_URL` or deployment not live |
-| Server starts but no response | Normal — it waits for MCP stdin, not HTTP |
-| `userId` required error | Pass your user ID (any stable string that identifies you) |
-| Swap fails | Check that your wallet has sufficient balance on Base; fund via `get_portfolio` first |
-| No Telegram messages | Run `set_telegram` with your bot token and chat ID |
-
-## Resources
-
-- **npm**: https://npmjs.com/package/@noelclaw/research
-- **Docs**: https://docs.noelclaw.fun
-- **GitHub**: https://github.com/noelclaw/noelmcp
-- **Web app**: https://noelclaw.fun
+- **Bankr LLM API** (`llm.bankr.bot`) — all agent reasoning and market intelligence
+- **x402 protocol** — native USDC micropayment support on Base
+- **MCP (Model Context Protocol)** — 35 tools, stdio transport, v2.1.0
+- **Convex** — real-time backend, cron automation engine, swarm coordinator
+- **0x Protocol v2** — on-chain swap execution on Base
+- **Base mainnet** — all token operations and payments
